@@ -11,10 +11,14 @@ import {
   verifyEvent,
   type NostrEvent,
 } from "nostr-tools";
+import Link from 'next/link';
 
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils' // already an installed dependency
 import { CalendarTemplateEvent } from '@/lib/nip-52';
 import { EventCard } from './components/EventCard';
+import { getCommunityATag } from '@/lib/nip-72';
+
+const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
+const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
 
 export default function Home() {
   const [events, setEvents] = useState<NostrEvent[]>([]);
@@ -30,54 +34,15 @@ export default function Home() {
     setSecretKey(sk);
     let pk = getPublicKey(sk) // `pk` is a hex string
     setPubKey(pk);
-
   }, []);
-  
-  const publishEvent = async () => {
-    try {
-      if (!secretKey || !pubKey) {
-        console.error('No secret key available');
-        return;
-      }
-      const calendarEvent: CalendarTemplateEvent = {
-        kind: 31922,
-        tags: [
-          ['d', '1234567890'],
-          ['title', 'My Event'],
-          ['start', '2025-01-01'],
-          ['end', '2025-01-02'],
-          ['location', '123 Main St, Anytown, USA'],
-          ['g', 'dr5r234'],
-        ],
-        content: 'This is a test event',
-        created_at: Math.floor(Date.now() / 1000),
-      };
-
-      let event = finalizeEvent(calendarEvent, secretKey);
-      
-      let isGood = verifyEvent(event);
-      console.log('event', event);
-      if (isGood) {
-        poolRef.current.publish(relays, event);
-        // Refresh events after publishing
-        const newEvents = await poolRef.current.querySync(
-          relays,
-          {
-            kinds: [11, 1, 31922],
-            limit: 20,
-            // authors: ['bc072411cb5a2c5651c8a5cfd92975cef68c165928c5e98b0705edff4301b6db', pubKey]
-          },
-        );
-        if (newEvents) {
-          setEvents(newEvents);
-        }
-      }
-    } catch (error) {
-      console.error('Error publishing event:', error);
-    }
-  };
 
   useEffect(() => {
+    if (!community_id || !community_identifier) {
+      console.error('Community ID or identifier not found in environment variables');
+      return;
+    }
+    const community_a_tag = getCommunityATag(community_id, community_identifier);
+    console.log('community_a_tag', community_a_tag);
     const asyncFetchEvents = async () => {
       console.log('fetching events');
       if (!pubKey) {
@@ -88,7 +53,7 @@ export default function Home() {
         {
           kinds: [11, 1, 31922],
           limit: 20,
-          // authors: ['bc072411cb5a2c5651c8a5cfd92975cef68c165928c5e98b0705edff4301b6db', pubKey]
+          '#a': [community_a_tag],
         },
       );
       console.log('events', events);
@@ -103,16 +68,29 @@ export default function Home() {
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
+        <div className="mb-4 p-3 bg-gray-100 rounded">
+          <div className="text-sm text-gray-700 font-semibold">Community ID: <span className="font-mono">{community_id}</span></div>
+          <div className="text-sm text-gray-700 font-semibold">Community Identifier: <span className="font-mono">{community_identifier}</span></div>
+        </div>
         <h1 className="text-3xl font-bold mb-4">Nostr Events</h1>
         <div className="mb-4">
           Connection status: {isConnected ? 'Connected' : 'Disconnected'}
         </div>
-        <button
-          onClick={publishEvent}
-          className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+        
+        <Link
+          href="/create"
+          className="inline-block mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
         >
-          Publish New Event
-        </button>
+          Create New Event
+        </Link>
+
+        <a
+          href="/api/calendar"
+          className="inline-block mb-4 ml-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+        >
+          Download Community Calendar
+        </a>
+
         <div className="space-y-4">
           {events.map((event) => (
             <EventCard key={event.id} event={event} />

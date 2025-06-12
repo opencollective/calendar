@@ -3,6 +3,7 @@ import { EventTemplate, type UnsignedEvent } from 'nostr-tools';
 export interface CalendarTemplateEvent extends EventTemplate {
   kind: 31922;
   tags: Array<
+    | ['a', string] // community reference
     | ['d', string] // random identifier
     | ['title', string] // title of calendar event
     | ['start', string] // YYYY-MM-DD
