@@ -19,6 +19,38 @@ export async function GET() {
   const community_a_tag = getCommunityATag(community_id, community_identifier);
 
   try {
+    // Fetch community info to get moderators
+    const communityEvents = await pool.querySync(
+      relays,
+      {
+        kinds: [34550],
+        authors: [community_id],
+        '#d': [community_identifier],
+      }
+    );
+
+    const community = communityEvents[0];
+    const moderators = community?.tags
+      .filter(tag => tag[0] === 'p' && tag[3] === 'moderator')
+      .map(tag => tag[1]) || [];
+
+    // Fetch approval events
+    const approvalEvents = await pool.querySync(
+      relays,
+      {
+        kinds: [4550],
+        '#a': [community_a_tag],
+      }
+    );
+
+    // Build set of approved event IDs
+    const approvedEventIds = new Set(
+      approvalEvents
+        .filter(event => moderators.includes(event.pubkey))
+        .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
+    );
+
+    // Fetch calendar events
     const events = await pool.querySync(
       relays,
       {
@@ -27,10 +59,13 @@ export async function GET() {
       }
     );
 
+    // Filter only approved events
+    const approvedEvents = events.filter(event => approvedEventIds.has(event.id));
+
     const calendar: IcsCalendar = {
       version: '2.0',
       prodId: '-//Nostr Events//EN',
-      events: events.map(event => {
+      events: approvedEvents.map(event => {
         const title = event.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Event';
         const start = event.tags.find(tag => tag[0] === 'start')?.[1];
         const end = event.tags.find(tag => tag[0] === 'end')?.[1];

@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import ClientLayout from '../lib/ClientLayout';
+import { KeyProvider } from './contexts/KeyProvider';
+import { EventsProvider } from './contexts/EventsProvider';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Nostr Events Viewer',
-  description: 'A simple Nostr events viewer built with Next.js',
+  title: 'Nostr Event Client',
+  description: 'A client for managing Nostr events',
 };
 
 export default function RootLayout({
@@ -14,10 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+      <body className={inter.className}>
+        <KeyProvider>
+          <EventsProvider>
+            {children}
+          </EventsProvider>
+        </KeyProvider>
       </body>
     </html>
   );

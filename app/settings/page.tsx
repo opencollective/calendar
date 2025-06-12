@@ -79,12 +79,13 @@ export default function Settings() {
                     Enter your nsec key
                   </label>
                   <input
-                    type="text"
                     id="customKey"
                     value={customKey}
                     onChange={(e) => setCustomKey(e.target.value)}
                     className="w-full p-2 border rounded font-mono text-sm"
                     placeholder="Enter your nsec key"
+                    autoComplete="off"
+                    type="password"
                   />
                 </div>
                 {error && (

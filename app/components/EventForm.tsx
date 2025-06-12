@@ -80,10 +80,10 @@ export function EventForm({ onSubmit }: EventFormProps) {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
             <label htmlFor="start" className="block text-sm font-medium text-gray-700">
-              Start Date <span className="text-red-500">*</span>
+              Start Date & Time <span className="text-red-500">*</span>
             </label>
             <input
-              type="date"
+              type="datetime-local"
               id="start"
               name="start"
               value={formData.start}
@@ -98,7 +98,7 @@ export function EventForm({ onSubmit }: EventFormProps) {
               End Date <span className="text-red-500">*</span>
             </label>
             <input
-              type="date"
+              type="datetime-local"
               id="end"
               name="end"
               value={formData.end}

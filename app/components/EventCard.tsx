@@ -1,6 +1,6 @@
 import { type NostrEvent } from 'nostr-tools';
 import { generateIcsCalendar, type IcsCalendar } from 'ts-ics';
-import { ApprovedEvent } from '../page';
+import { ApprovedEvent } from '../contexts/EventsProvider';
 
 interface EventCardProps {
   event: ApprovedEvent;

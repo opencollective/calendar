@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   SimplePool,
   type NostrEvent,
@@ -11,72 +11,29 @@ import Link from 'next/link';
 
 import { getCommunityATag } from '@/lib/nip-72';
 import { useKey } from '../contexts/KeyProvider';
+import { useEvents, type ApprovedEvent } from '../contexts/EventsProvider';
 
 const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
 const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
 
 export default function ModerationPage() {
-  const [pendingEvents, setPendingEvents] = useState<NostrEvent[]>([]);
-  const [communityInfo, setCommunityInfo] = useState<NostrEvent | null>(null);
   const poolRef = useRef(new SimplePool());
   const router = useRouter();
   const relays = ['wss://relay.chorus.community'];
   const { publicKey, secretKey } = useKey();
+  const { events, communityInfo, refreshEvents } = useEvents();
 
-  useEffect(() => {
-    if (!community_id || !community_identifier || !publicKey) {
-      console.error('Missing required information');
-      return;
-    }
+  // Check if user is a moderator
+  const isModerator = communityInfo?.tags.some(tag => 
+    tag[0] === 'p' && 
+    tag[1] === publicKey && 
+    tag[3] === 'moderator'
+  );
 
-    const asyncFetchData = async () => {
-      // Fetch community info to verify moderator status
-      const communityEvents = await poolRef.current.querySync(
-        relays,
-        {
-          kinds: [34550],
-          authors: [community_id],
-          '#d': [community_identifier],
-        },
-      );
-
-      if (communityEvents.length === 0) {
-        console.error('Community not found');
-        return;
-      }
-
-      const community = communityEvents[0];
-      const isModerator = community.tags.some(tag => 
-        tag[0] === 'p' && 
-        tag[1] === publicKey && 
-        tag[3] === 'moderator'
-      );
-
-      if (!isModerator) {
-        console.error('Not authorized as moderator');
-        router.push('/');
-        return;
-      }
-
-      setCommunityInfo(community);
-
-      // Fetch pending events
-      const community_a_tag = getCommunityATag(community_id, community_identifier);
-      const events = await poolRef.current.querySync(
-        relays,
-        {
-          kinds: [31922], // Calendar events
-          '#a': [community_a_tag],
-        },
-      );
-
-      if (events) {
-        setPendingEvents(events);
-      }
-    };
-
-    asyncFetchData();
-  }, [publicKey]);
+  if (!isModerator) {
+    router.push('/');
+    return null;
+  }
 
   const handleApprove = async (event: NostrEvent) => {
     if (!publicKey || !secretKey) return;
@@ -95,37 +52,14 @@ export default function ModerationPage() {
     }, secretKey);
 
     try {
-        poolRef.current.publish(relays, approvalEvent);
-      // Remove the approved event from the list
-      console.log('approvalEvent', approvalEvent);
-      setPendingEvents(prev => prev.filter(e => e.id !== event.id));
+      poolRef.current.publish(relays, approvalEvent);
+      // Refresh events to update the list
+      await refreshEvents();
     } catch (error) {
       console.error('Error publishing approval:', error);
     }
   };
-
-  const handleReject = async (event: NostrEvent) => {
-    if (!publicKey || !secretKey) return;
-
-    // Create rejection event
-    const rejectionEvent = finalizeEvent({
-      kind: 1,
-      tags: [
-        ['a', getCommunityATag(community_id!, community_identifier!)],
-        ['e', event.id],
-      ],
-      content: 'Rejected',
-      created_at: Math.floor(Date.now() / 1000),
-    }, secretKey);
-
-    try {
-      await poolRef.current.publish(relays, rejectionEvent);
-      // Remove the rejected event from the list
-      setPendingEvents(prev => prev.filter(e => e.id !== event.id));
-    } catch (error) {
-      console.error('Error publishing rejection:', error);
-    }
-  };
+  const calendarEvents = useMemo(() => events.filter(event => event.kind === 31922 && event.approved === false), [events]);
 
   return (
     <main className="min-h-screen p-8">
@@ -141,11 +75,11 @@ export default function ModerationPage() {
         </div>
 
         <div className="space-y-4">
-          {pendingEvents.map((event) => {
-            const title = event.tags.find(tag => tag[0] === 'title')?.[1] || 'Untitled Event';
-            const start = event.tags.find(tag => tag[0] === 'start')?.[1];
-            const end = event.tags.find(tag => tag[0] === 'end')?.[1];
-            const location = event.tags.find(tag => tag[0] === 'location')?.[1];
+          {calendarEvents.map((event: ApprovedEvent) => {
+            const title = event.tags.find((tag: string[]) => tag[0] === 'title')?.[1] || 'Untitled Event';
+            const start = event.tags.find((tag: string[]) => tag[0] === 'start')?.[1];
+            const end = event.tags.find((tag: string[]) => tag[0] === 'end')?.[1];
+            const location = event.tags.find((tag: string[]) => tag[0] === 'location')?.[1];
 
             return (
               <div key={event.id} className="border p-4 rounded-lg bg-white shadow-sm">
@@ -169,12 +103,6 @@ export default function ModerationPage() {
                       className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
                     >
                       Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(event)}
-                      className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                    >
-                      Reject
                     </button>
                   </div>
                 </div>

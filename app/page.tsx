@@ -1,103 +1,20 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import {
-  SimplePool,
-  type EventTemplate,
-  finalizeEvent,
-  VerifiedEvent,
-  verifyEvent,
-  type NostrEvent,
-} from "nostr-tools";
 import Link from 'next/link';
-
-import { CalendarTemplateEvent } from '@/lib/nip-52';
 import { EventCard } from './components/EventCard';
-import { getCommunityATag } from '@/lib/nip-72';
 import { useKey } from './contexts/KeyProvider';
-
-const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
-const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
-
-
-export type ApprovedEvent = NostrEvent & {
-  approved: boolean;
-};
+import { useEvents } from './contexts/EventsProvider';
 
 export default function Home() {
-  const [events, setEvents] = useState<ApprovedEvent[]>([]);
-  const [communityInfo, setCommunityInfo] = useState<NostrEvent | null>(null);
-  const [moderators, setModerators] = useState<string[]>([]);
-  const poolRef = useRef(new SimplePool());
-  const relays = ['wss://relay.chorus.community'];
   const { publicKey } = useKey();
+  const { events, communityInfo, moderators, isLoading, error } = useEvents();
   
-  useEffect(() => {
-    if (!community_id || !community_identifier) {
-      console.error('Community ID or identifier not found in environment variables');
-      return;
-    }
-    const community_a_tag = getCommunityATag(community_id, community_identifier);
-    const asyncFetchEvents = async () => {
-      if (!publicKey) {
-        return;
-      }
-
-      // Fetch community info
-      const communityEvents = await poolRef.current.querySync(
-        relays,
-        {
-          kinds: [34550],
-          authors: [community_id],
-          '#d': [community_identifier],
-        },
-      );
-      const community = communityEvents?.[0];
-      setCommunityInfo(community);
-
-      // Fetch community events
-      const events = await poolRef.current.querySync(
-        relays,
-        {
-          kinds: [11, 1, 31922],
-          limit: 20,
-          '#a': [community_a_tag],
-        },
-      );
-
-      // Get approval events from moderators
-      const approvalEvents = await poolRef.current.querySync(
-        relays,
-        {
-          kinds: [4550],
-          '#a': [community_a_tag],
-        },
-      );
-      const mods = community?.tags.filter(tag => tag[0] === 'p' && tag[3] === 'moderator').map(tag => tag[1]);
-      setModerators(mods || []);
-      // Build set of approved event IDs
-      const approvedEventIds = new Set(
-        approvalEvents
-          .filter(event => mods?.includes(event.pubkey))
-          .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
-      );
-
-      if (events) {
-        setEvents(events.map(event => ({
-          ...event,
-          approved: approvedEventIds.has(event.id)
-        })));
-      }
-    }
-    asyncFetchEvents();
-  }, [publicKey]);
-
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-4 p-3 bg-gray-100 rounded">
-          <div className="text-sm text-gray-700 font-semibold">Community ID: <span className="font-mono">{community_id}</span></div>
-          <div className="text-sm text-gray-700 font-semibold">Community Identifier: <span className="font-mono">{community_identifier}</span></div>
+          <div className="text-sm text-gray-700 font-semibold">Community ID: <span className="font-mono">{process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID}</span></div>
+          <div className="text-sm text-gray-700 font-semibold">Community Identifier: <span className="font-mono">{process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER}</span></div>
           {communityInfo && (
             <>
               <div className="text-sm text-gray-700 font-semibold mt-2">Community Name: <span className="font-mono">{communityInfo.tags.find(tag => tag[0] === 'name')?.[1]}</span></div>
@@ -161,6 +78,14 @@ export default function Home() {
             Download Community Calendar
           </a>
         </div>
+
+        {isLoading && (
+          <div className="text-center py-4">Loading events...</div>
+        )}
+
+        {error && (
+          <div className="text-red-500 py-4">{error}</div>
+        )}
 
         <div className="space-y-4">
           {events.map((event) => (
