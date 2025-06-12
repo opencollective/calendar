@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
+    "@types/localforage": "^0.0.34",
     "localforage": "^1.10.0",
     "next": "latest",
     "nostr-tools": "^2.15.0",

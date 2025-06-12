@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import './globals.css';
 import type { Metadata } from 'next';
+import './globals.css';
+import ClientLayout from './ClientLayout';
 
 export const metadata: Metadata = {
   title: 'Nostr Events Viewer',
@@ -10,11 +10,15 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
+      </body>
     </html>
   );
 } 
