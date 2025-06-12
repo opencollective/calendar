@@ -19,8 +19,15 @@ import { useKey } from './contexts/KeyProvider';
 const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
 const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
 
+
+export type ApprovedEvent = NostrEvent & {
+  approved: boolean;
+};
+
 export default function Home() {
-  const [events, setEvents] = useState<NostrEvent[]>([]);
+  const [events, setEvents] = useState<ApprovedEvent[]>([]);
+  const [communityInfo, setCommunityInfo] = useState<NostrEvent | null>(null);
+  const [moderators, setModerators] = useState<string[]>([]);
   const poolRef = useRef(new SimplePool());
   const relays = ['wss://relay.chorus.community'];
   const { publicKey } = useKey();
@@ -31,12 +38,24 @@ export default function Home() {
       return;
     }
     const community_a_tag = getCommunityATag(community_id, community_identifier);
-    console.log('community_a_tag', community_a_tag);
     const asyncFetchEvents = async () => {
-      console.log('fetching events');
       if (!publicKey) {
         return;
       }
+
+      // Fetch community info
+      const communityEvents = await poolRef.current.querySync(
+        relays,
+        {
+          kinds: [34550],
+          authors: [community_id],
+          '#d': [community_identifier],
+        },
+      );
+      const community = communityEvents?.[0];
+      setCommunityInfo(community);
+
+      // Fetch community events
       const events = await poolRef.current.querySync(
         relays,
         {
@@ -45,10 +64,29 @@ export default function Home() {
           '#a': [community_a_tag],
         },
       );
-      console.log('events', events);
+
+      // Get approval events from moderators
+      const approvalEvents = await poolRef.current.querySync(
+        relays,
+        {
+          kinds: [4550],
+          '#a': [community_a_tag],
+        },
+      );
+      const mods = community?.tags.filter(tag => tag[0] === 'p' && tag[3] === 'moderator').map(tag => tag[1]);
+      setModerators(mods || []);
+      // Build set of approved event IDs
+      const approvedEventIds = new Set(
+        approvalEvents
+          .filter(event => mods?.includes(event.pubkey))
+          .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
+      );
+
       if (events) {
-        console.log('it exists indeed on this relay:', events)
-        setEvents(events);
+        setEvents(events.map(event => ({
+          ...event,
+          approved: approvedEventIds.has(event.id)
+        })));
       }
     }
     asyncFetchEvents();
@@ -60,6 +98,31 @@ export default function Home() {
         <div className="mb-4 p-3 bg-gray-100 rounded">
           <div className="text-sm text-gray-700 font-semibold">Community ID: <span className="font-mono">{community_id}</span></div>
           <div className="text-sm text-gray-700 font-semibold">Community Identifier: <span className="font-mono">{community_identifier}</span></div>
+          {communityInfo && (
+            <>
+              <div className="text-sm text-gray-700 font-semibold mt-2">Community Name: <span className="font-mono">{communityInfo.tags.find(tag => tag[0] === 'name')?.[1]}</span></div>
+              <div className="text-sm text-gray-700 font-semibold">Description: <span className="font-mono">{communityInfo.content}</span></div>
+              <div className="text-sm text-gray-700 font-semibold mt-2">
+                Moderators:
+                <div className="mt-1 space-y-1">
+                  {moderators
+                    .map((moderator, index) => (
+                      <div key={index} className="ml-4">
+                        <span className="font-mono">{moderator}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </>
+          )}
+          {communityInfo && (
+            <div className="text-sm text-gray-700 font-semibold mt-2">
+              Raw Tags:
+              <pre className="mt-1 p-2 bg-gray-200 rounded overflow-x-auto">
+                {JSON.stringify(communityInfo.tags, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
         <h1 className="text-3xl font-bold mb-4">Nostr Events</h1>
         
@@ -77,6 +140,19 @@ export default function Home() {
           >
             Settings
           </Link>
+
+          {communityInfo && publicKey && communityInfo.tags.some(tag => 
+            tag[0] === 'p' && 
+            tag[1] === publicKey && 
+            tag[3] === 'moderator'
+          ) && (
+            <Link
+              href="/moderation"
+              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+            >
+              Moderate Events
+            </Link>
+          )}
 
           <a
             href="/api/calendar"

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import ClientLayout from './ClientLayout';
+import ClientLayout from '../lib/ClientLayout';
 
 export const metadata: Metadata = {
   title: 'Nostr Events Viewer',

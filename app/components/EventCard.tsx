@@ -1,8 +1,9 @@
 import { type NostrEvent } from 'nostr-tools';
 import { generateIcsCalendar, type IcsCalendar } from 'ts-ics';
+import { ApprovedEvent } from '../page';
 
 interface EventCardProps {
-  event: NostrEvent;
+  event: ApprovedEvent;
 }
 
 export function EventCard({ event }: EventCardProps) {
@@ -59,7 +60,13 @@ export function EventCard({ event }: EventCardProps) {
     const location = event.tags.find((tag: string[]) => tag[0] === 'location')?.[1];
 
     return (
-      <div className="border p-4 rounded-lg bg-blue-50">
+      <div className="border p-4 rounded-lg bg-blue-50 relative">
+        <div className="group relative">
+          <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${event.approved ? 'bg-green-500' : 'bg-orange-500'}`} />
+          <div className="absolute top-6 right-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+            {event.approved ? 'Approved' : 'Pending approval'}
+          </div>
+        </div>
         <div className="text-sm text-gray-500">
           {new Date(event.created_at * 1000).toLocaleString()}
         </div>
@@ -81,7 +88,13 @@ export function EventCard({ event }: EventCardProps) {
   }
 
   return (
-    <div className="border p-4 rounded-lg">
+    <div className="border p-4 rounded-lg relative">
+      <div className="group relative">
+        <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${event.approved ? 'bg-green-500' : 'bg-orange-500'}`} />
+        <div className="absolute top-6 right-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+          {event.approved ? 'Approved' : 'Pending approval'}
+        </div>
+      </div>
       <div className="text-sm text-gray-500">
         {new Date(event.created_at * 1000).toLocaleString()}
       </div>

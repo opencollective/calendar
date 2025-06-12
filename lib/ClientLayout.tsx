@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyProvider } from './contexts/KeyProvider';
+import { KeyProvider } from '../app/contexts/KeyProvider';
 
 export default function ClientLayout({
   children,
