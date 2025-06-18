@@ -1,14 +1,55 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { bytesToHex } from 'nostr-tools/utils';
 import { useKey } from '../contexts/KeyProvider';
 
+interface LastSyncInfo {
+  lastSyncTime: number;
+  lastSyncDate: string | null;
+  icsUrl?: string | null;
+}
+
 export default function Settings() {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [customKey, setCustomKey] = useState('');
+  const [lastSyncInfo, setLastSyncInfo] = useState<LastSyncInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { secretKey, publicKey, setCustomKey: setKey, generateNewKey, error } = useKey();
+
+  const fetchSyncStatus = async () => {
+    try {
+      const response = await fetch('/api/events/sync');
+      const data = await response.json();
+      setLastSyncInfo(data);
+    } catch (error) {
+      console.error('Failed to fetch sync status:', error);
+    }
+  };
+
+
+  const handleManualSync = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/events/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        await fetchSyncStatus();
+      } else {
+        console.error('Failed to trigger manual sync');
+      }
+    } catch (error) {
+      console.error('Error triggering manual sync:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCustomKeySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +75,47 @@ export default function Settings() {
           </Link>
         </div>
 
+        {/* Event Sync Section */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Event Sync</h2>
+          
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full mr-2 bg-green-500"></div>
+              <span className="text-sm font-medium">
+                Status: Cron Job Active (every 5 minutes)
+              </span>
+            </div>
+            
+            {lastSyncInfo && lastSyncInfo.lastSyncDate && (
+              <div className="text-sm text-gray-600">
+                Last Sync: {new Date(lastSyncInfo.lastSyncDate).toLocaleString()}
+              </div>
+            )}
+
+            {lastSyncInfo && lastSyncInfo.icsUrl && (
+              <div className="text-sm text-gray-600">
+                ICS Feed: <span className="font-mono text-xs break-all">{lastSyncInfo.icsUrl}</span>
+              </div>
+            )}
+
+            {lastSyncInfo && !lastSyncInfo.icsUrl && (
+              <div className="text-sm text-gray-500">
+                ICS Feed: Not configured
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleManualSync}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Syncing...' : 'Sync Now'}
+          </button>
+        </div>
+
+        {/* Nostr Keys Section */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Nostr Keys</h2>
           
