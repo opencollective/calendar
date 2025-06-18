@@ -24,7 +24,6 @@ export function EmbedPageClient() {
   
   return (
     <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Community Events</h1>
       
       {isLoading && (
         <div className="text-center py-4 text-gray-600">Loading events...</div>

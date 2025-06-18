@@ -65,6 +65,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       const community = communityEvents?.[0];
       setCommunityInfo(community);
 
+      // Log community raw tags for debugging
+      if (community) {
+        console.log('Community raw tags:', JSON.stringify(community.tags, null, 2));
+      }
+
       // Fetch community events
       const events = await poolRef.querySync(
         relays,
