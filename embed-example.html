@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nostr Events Calendar - Embed Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .embed-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .embed-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        .code-example {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nostr Events Calendar</h1>
+            <p>Embeddable community events calendar</p>
+        </div>
+
+        <div class="instructions">
+            <h3>How to embed this calendar:</h3>
+            <p>Copy the iframe code below and paste it into your website. The calendar will automatically load and display community events.</p>
+        </div>
+
+        <div class="code-example">
+&lt;iframe 
+    src="https://your-domain.com/embed" 
+    width="100%" 
+    height="600" 
+    frameborder="0" 
+    style="border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"
+&gt;&lt;/iframe&gt;
+        </div>
+
+        <div class="embed-container">
+            <iframe 
+                src="/embed" 
+                class="embed-iframe"
+                title="Community Events Calendar"
+            ></iframe>
+        </div>
+
+        <div class="instructions">
+            <h3>Customization Options:</h3>
+            <ul>
+                <li><strong>Height:</strong> Adjust the height attribute to make the calendar taller or shorter</li>
+                <li><strong>Width:</strong> Use percentage or fixed pixel values for width</li>
+                <li><strong>Styling:</strong> Add custom CSS to match your website's design</li>
+                <li><strong>Responsive:</strong> The calendar is responsive and will adapt to different screen sizes</li>
+            </ul>
+        </div>
+
+        <div class="code-example">
+&lt;!-- Responsive embed example --&gt;
+&lt;div style="position: relative; padding-bottom: 75%; height: 0; overflow: hidden;"&gt;
+    &lt;iframe 
+        src="https://your-domain.com/embed" 
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+        frameborder="0"
+    &gt;&lt;/iframe&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+</body>
+</html> 

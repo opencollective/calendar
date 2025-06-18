@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { bytesToHex } from 'nostr-tools/utils';
-import { useKey } from '../contexts/KeyProvider';
+import { useKey } from '../../contexts/KeyProvider';
 
 interface LastSyncInfo {
   lastSyncTime: number;

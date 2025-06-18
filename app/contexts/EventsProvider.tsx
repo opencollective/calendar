@@ -16,6 +16,7 @@ interface EventsContextType {
   isLoading: boolean;
   error: string | null;
   refreshEvents: () => Promise<void>;
+  isInitialized: boolean;
 }
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined);
@@ -24,10 +25,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<ApprovedEvent[]>([]);
   const [communityInfo, setCommunityInfo] = useState<NostrEvent | null>(null);
   const [moderators, setModerators] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const poolRef = useState(new SimplePool())[0];
-  const { publicKey } = useKey();
+  const { publicKey, isInitialized: keyInitialized } = useKey();
 
   const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
   const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
@@ -36,10 +38,12 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const fetchEvents = async () => {
     if (!community_id || !community_identifier) {
       setError('Community ID or identifier not found in environment variables');
+      setIsInitialized(true);
       return;
     }
 
     if (!publicKey) {
+      setIsInitialized(true);
       return;
     }
 
@@ -103,13 +107,15 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching events:', err);
     } finally {
       setIsLoading(false);
+      setIsInitialized(true);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
-  }, [publicKey]);
-
+    if (keyInitialized) {
+      fetchEvents();
+    }
+  }, [publicKey, keyInitialized]);
 
   return (
     <EventsContext.Provider value={{
@@ -118,7 +124,8 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       moderators,
       isLoading,
       error,
-      refreshEvents: fetchEvents
+      refreshEvents: fetchEvents,
+      isInitialized
     }}>
       {children}
     </EventsContext.Provider>

@@ -7,8 +7,11 @@ import { EventsProvider } from './contexts/EventsProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Nostr Event Client',
+  title: 'Community Curated Events',
   description: 'A client for managing Nostr events',
+  icons: {
+    icon: '/icon.jpg',
+  },
 };
 
 export default function RootLayout({
@@ -19,11 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <KeyProvider>
-          <EventsProvider>
-            {children}
-          </EventsProvider>
-        </KeyProvider>
+        {children}
       </body>
     </html>
   );

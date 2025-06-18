@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { CalendarTemplateEvent } from '@/lib/nip-52';
-import { EventForm } from '../components/EventForm';
+import { EventForm } from '../../components/EventForm';
 
 export default function CreateEvent() {
   const [isConnected, setIsConnected] = useState(false);

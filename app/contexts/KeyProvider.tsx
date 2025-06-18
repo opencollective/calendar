@@ -12,6 +12,7 @@ interface KeyContextType {
   setCustomKey: (key: string) => Promise<void>;
   generateNewKey: () => Promise<void>;
   error: string | null;
+  isInitialized: boolean;
 }
 
 const KeyContext = createContext<KeyContextType | undefined>(undefined);
@@ -20,6 +21,7 @@ export function KeyProvider({ children }: { children: ReactNode }) {
   const [secretKey, setLocalSecretKey] = useState<Uint8Array | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize secret key from localForage
   useEffect(() => {
@@ -36,6 +38,7 @@ export function KeyProvider({ children }: { children: ReactNode }) {
         setSecretKey(sk);
         setPublicKey(getPublicKey(sk));
       }
+      setIsInitialized(true);
     };
     
     initializeKey();
@@ -81,7 +84,8 @@ export function KeyProvider({ children }: { children: ReactNode }) {
       publicKey,
       setCustomKey,
       generateNewKey,
-      error
+      error,
+      isInitialized
     }}>
       {children}
     </KeyContext.Provider>

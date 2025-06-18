@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { EventCard } from './components/EventCard';
-import { useKey } from './contexts/KeyProvider';
-import { useEvents } from './contexts/EventsProvider';
+import { EventCard } from '../components/EventCard';
+import { useKey } from '../contexts/KeyProvider';
+import { useEvents } from '../contexts/EventsProvider';
 
 export default function Home() {
   const { publicKey } = useKey();
@@ -41,7 +41,6 @@ export default function Home() {
             </div>
           )}
         </div>
-        <h1 className="text-3xl font-bold mb-4">Nostr Events</h1>
         
         <div className="flex gap-4 mb-4">
           <Link

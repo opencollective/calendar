@@ -10,8 +10,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { getCommunityATag } from '@/lib/nip-72';
-import { useKey } from '../contexts/KeyProvider';
-import { useEvents, type ApprovedEvent } from '../contexts/EventsProvider';
+import { useKey } from '../../contexts/KeyProvider';
+import { useEvents, type ApprovedEvent } from '../../contexts/EventsProvider';
 
 const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
 const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;

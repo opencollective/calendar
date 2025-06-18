@@ -9,6 +9,40 @@ Started from a conversation in [Open Collective](https://github.com/opencollecti
 ### Automated Event Sync
 The application uses a Vercel cron job to automatically query Nostr relays for new events every 5 minutes. It also fetches events from an external iCal feed and creates corresponding Nostr events.
 
+### Embeddable Calendar
+The application provides an embeddable version of the events calendar that can be easily integrated into other websites using iframes.
+
+#### Embed Usage
+- **Embed URL**: `/embed` - Provides a clean, embeddable version of the events calendar
+- **Features**: 
+  - Compact event cards optimized for embedding
+  - Responsive design that adapts to container size
+  - "Add to Calendar" functionality for calendar events
+  - Approval status indicators
+  - No navigation buttons or admin features
+
+#### Embed Code Example
+```html
+<iframe 
+    src="https://your-domain.com/embed" 
+    width="100%" 
+    height="600" 
+    frameborder="0" 
+    style="border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"
+></iframe>
+```
+
+#### Responsive Embed Example
+```html
+<div style="position: relative; padding-bottom: 75%; height: 0; overflow: hidden;">
+    <iframe 
+        src="https://your-domain.com/embed" 
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+        frameborder="0"
+    ></iframe>
+</div>
+```
+
 #### Configuration
 Set the following environment variables:
 
