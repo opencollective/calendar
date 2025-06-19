@@ -9,9 +9,6 @@ const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
 const ics_url = process.env.ICS_URL;
 const relays = ['wss://relay.chorus.community'];
 
-// In-memory storage for last sync time (in production, use a database)
-let lastSyncTime = 0;
-
 async function fetchAndProcessICSEvents() {
   if (!ics_url) {
     console.log('No ICS URL configured, skipping ICS sync');
@@ -27,7 +24,7 @@ async function createNostrEvent(icsEvent: ICSEvent, secretKey: Uint8Array) {
   return finalizeEvent(eventTemplate, secretKey);
 }
 
-export async function POST() {
+export async function GET() {
   if (!community_id || !community_identifier) {
     return NextResponse.json(
       { error: 'Community ID or identifier not found in environment variables' },
@@ -39,11 +36,6 @@ export async function POST() {
   const community_a_tag = getCommunityATag(community_id, community_identifier);
 
   try {
-    const currentTime = Math.floor(Date.now() / 1000);
-    const since = lastSyncTime > 0 ? lastSyncTime : currentTime - 3600; // Default to 1 hour ago if first sync
-
-    console.log(`Syncing events since ${new Date(since * 1000).toISOString()}`);
-
     // Fetch and process ICS events
     const icsEvents = await fetchAndProcessICSEvents();
     let icsEventsCreated = 0;
@@ -95,14 +87,10 @@ export async function POST() {
       }
     }
 
-    // Update last sync time
-    lastSyncTime = currentTime;
-
     console.log(`Synced ${icsEventsCreated} new events from ICS`);
     return NextResponse.json({
       success: true,
       icsEventsCreated: icsEventsCreated,
-      lastSyncTime: currentTime,
       icsUrl: ics_url || null
     });
 
@@ -116,11 +104,3 @@ export async function POST() {
     pool.close(relays);
   }
 }
-
-export async function GET() {
-  return NextResponse.json({
-    lastSyncTime: lastSyncTime,
-    lastSyncDate: lastSyncTime > 0 ? new Date(lastSyncTime * 1000).toISOString() : null,
-    icsUrl: ics_url || null
-  });
-} 

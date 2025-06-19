@@ -18,16 +18,6 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(false);
   const { secretKey, publicKey, setCustomKey: setKey, generateNewKey, error } = useKey();
 
-  const fetchSyncStatus = async () => {
-    try {
-      const response = await fetch('/api/events/sync');
-      const data = await response.json();
-      setLastSyncInfo(data);
-    } catch (error) {
-      console.error('Failed to fetch sync status:', error);
-    }
-  };
-
 
   const handleManualSync = async () => {
     setIsLoading(true);
@@ -38,11 +28,9 @@ export default function Settings() {
           'Content-Type': 'application/json',
         },
       });
-      
-      if (response.ok) {
-        await fetchSyncStatus();
-      } else {
-        console.error('Failed to trigger manual sync');
+
+      if (!response.ok) {
+        throw new Error(`Failed to sync events: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error triggering manual sync:', error);

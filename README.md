@@ -58,7 +58,7 @@ Set the following environment variables:
   - `GET /api/events/sync` - Get last sync information
 
 #### How it Works
-1. Vercel cron job runs every 5 minutes and calls `/api/events/sync`
+1. Vercel cron job runs every day and calls `/api/events/sync`
 2. The sync endpoint queries Nostr relays for new events since last sync
 3. If `ICS_URL` is configured, it fetches events from the iCal feed
 4. New iCal events are created as Nostr events (if they don't already exist)
