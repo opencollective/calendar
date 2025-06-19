@@ -1,53 +1,29 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import {
-  SimplePool,
-  finalizeEvent,
-  generateSecretKey,
-  getPublicKey,
-  verifyEvent,
-  type NostrEvent,
-} from "nostr-tools";
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { CalendarTemplateEvent } from '@/lib/nip-52';
+import { CalendarEvent } from '@/lib/nip-52';
 import { EventForm } from '../../components/EventForm';
+import { useEvents } from '../../contexts/EventsProvider';
 
 export default function CreateEvent() {
   const [isConnected, setIsConnected] = useState(false);
-  const [secretKey, setSecretKey] = useState<Uint8Array | null>(null);
-  const [pubKey, setPubKey] = useState<string | null>(null);
-  const poolRef = useRef(new SimplePool());
   const router = useRouter();
-  const relays = ['wss://relay.chorus.community'];
+  const { createEvent } = useEvents();
   
-  // Initialize secret key
-  useEffect(() => {
-    const sk = generateSecretKey();
-    setSecretKey(sk);
-    let pk = getPublicKey(sk) // `pk` is a hex string
-    setPubKey(pk);
-  }, []);
-  
-  const handleEventSubmit = async (calendarEvent: CalendarTemplateEvent) => {
+  const handleEventSubmit = async (calendarEvent: CalendarEvent) => {
     try {
-      if (!secretKey || !pubKey) {
-        console.error('No secret key available');
-        return;
-      }
-
-      let event = finalizeEvent(calendarEvent, secretKey);
+      const success = await createEvent(calendarEvent);
       
-      let isGood = verifyEvent(event);
-      console.log('event', event);
-      if (isGood) {
-        poolRef.current.publish(relays, event);
+      if (success) {
         // Navigate back to home page after successful submission
         router.push('/');
+      } else {
+        console.error('Failed to create event');
       }
     } catch (error) {
-      console.error('Error publishing event:', error);
+      console.error('Error creating event:', error);
     }
   };
 

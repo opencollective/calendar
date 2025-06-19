@@ -81,14 +81,43 @@ export default function ModerationPage() {
             const end = event.tags.find((tag: string[]) => tag[0] === 'end')?.[1];
             const location = event.tags.find((tag: string[]) => tag[0] === 'location')?.[1];
 
+            let startDisplay: string;
+            let endDisplay: string;
+
+            if (event.kind === 31922) {
+              // Date-based event
+              startDisplay = start || 'No start date';
+              endDisplay = end || startDisplay;
+            } else {
+              // Time-based event
+              if (start) {
+                const startDate = new Date(parseInt(start) * 1000);
+                startDisplay = startDate.toLocaleString();
+              } else {
+                startDisplay = 'No start time';
+              }
+              
+              if (end) {
+                const endDate = new Date(parseInt(end) * 1000);
+                endDisplay = endDate.toLocaleString();
+              } else {
+                endDisplay = 'No end time';
+              }
+            }
+
             return (
               <div key={event.id} className="border p-4 rounded-lg bg-white shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-lg font-semibold">{title}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold">{title}</h3>
+                      <span className="text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded">
+                        {event.kind === 31922 ? 'All-day event' : 'Time-based event'}
+                      </span>
+                    </div>
                     <div className="mt-2 text-sm text-gray-600">
-                      <div>Start: {start}</div>
-                      <div>End: {end}</div>
+                      <div>Start: {startDisplay}</div>
+                      <div>End: {endDisplay}</div>
                       {location && <div>Location: {location}</div>}
                     </div>
                     <div className="mt-2 text-sm text-gray-500">
