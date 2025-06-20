@@ -77,7 +77,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       const events = await poolRef.querySync(
         relays,
         {
-          kinds: [11, 1, 31922, 31923], // Query both date-based and time-based calendar events
+          kinds: [31922, 31923], // Query both date-based and time-based calendar events
           limit: 20,
           '#a': [community_a_tag],
         },
