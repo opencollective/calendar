@@ -12,6 +12,9 @@ export function EmbedPageClient() {
     setMounted(true);
   }, []);
 
+  // Filter to only show approved events
+  const approvedEvents = events.filter(event => event.approved);
+
   // Prevent hydration mismatch by not rendering until mounted and initialized
   if (!mounted || !isInitialized) {
     return (
@@ -34,14 +37,14 @@ export function EmbedPageClient() {
       )}
 
       <div className="space-y-3">
-        {events.map((event) => (
+        {approvedEvents.map((event) => (
           <EmbedEventCard key={event.id} event={event} />
         ))}
       </div>
 
-      {events.length === 0 && !isLoading && !error && (
+      {approvedEvents.length === 0 && !isLoading && !error && (
         <div className="text-center py-8 text-gray-500">
-          No events found
+          No approved events found
         </div>
       )}
     </div>

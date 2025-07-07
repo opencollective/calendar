@@ -15,8 +15,11 @@ interface EventsContextType {
   communityInfo: NostrEvent | null;
   moderators: string[];
   isLoading: boolean;
+  isLoadingMore: boolean;
   error: string | null;
+  hasMore: boolean;
   refreshEvents: () => Promise<void>;
+  loadMoreEvents: () => Promise<void>;
   createEvent: (calendarEvent: CalendarEvent) => Promise<boolean>;
   updateEvent: (updatedEvent: CalendarEvent) => Promise<boolean>;
   deleteEvent: (eventId: string) => Promise<boolean>;
@@ -30,16 +33,32 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const [communityInfo, setCommunityInfo] = useState<NostrEvent | null>(null);
   const [moderators, setModerators] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [lastEventTimestamp, setLastEventTimestamp] = useState<number | null>(null);
+  const [loadedEventIds, setLoadedEventIds] = useState<Set<string>>(new Set());
   const poolRef = useState(new SimplePool())[0];
   const { publicKey, secretKey, isInitialized: keyInitialized } = useKey();
 
   const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
   const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
   const relays = ['wss://relay.chorus.community'];
+  const EVENTS_PER_PAGE = 20;
 
-  const fetchEvents = async () => {
+  // Helper function to deduplicate events
+  const deduplicateEvents = (newEvents: ApprovedEvent[], existingIds: Set<string>): ApprovedEvent[] => {
+    return newEvents.filter(event => {
+      if (existingIds.has(event.id)) {
+        return false;
+      }
+      existingIds.add(event.id);
+      return true;
+    });
+  };
+
+  const fetchEvents = async (isInitialLoad = true) => {
     if (!community_id || !community_identifier) {
       setError('Community ID or identifier not found in environment variables');
       setIsInitialized(true);
@@ -51,73 +70,155 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setIsLoading(true);
+    if (isInitialLoad) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
 
     try {
       const community_a_tag = getCommunityATag(community_id, community_identifier);
 
-      // Fetch community info
-      const communityEvents = await poolRef.querySync(
-        relays,
-        {
-          kinds: [34550],
-          authors: [community_id],
-          '#d': [community_identifier],
-        },
-      );
-      const community = communityEvents?.[0];
-      setCommunityInfo(community);
+      // Fetch community info (only on initial load)
+      if (isInitialLoad) {
+        const communityEvents = await poolRef.querySync(
+          relays,
+          {
+            kinds: [34550],
+            authors: [community_id],
+            '#d': [community_identifier],
+          },
+        );
+        const community = communityEvents?.[0];
+        setCommunityInfo(community);
 
-      // Log community raw tags for debugging
-      if (community) {
-        console.log('Community raw tags:', JSON.stringify(community.tags, null, 2));
-      }
+        // Log community raw tags for debugging
+        if (community) {
+          console.log('Community raw tags:', JSON.stringify(community.tags, null, 2));
+        }
 
-      // Fetch community events
-      const events = await poolRef.querySync(
-        relays,
-        {
-          kinds: [31922, 31923], // Query both date-based and time-based calendar events
-          limit: 20,
-          '#a': [community_a_tag],
-        },
-      );
+        // Get approval events from moderators
+        const approvalEvents = await poolRef.querySync(
+          relays,
+          {
+            kinds: [4550],
+            '#a': [community_a_tag],
+          },
+        );
 
-      // Get approval events from moderators
-      const approvalEvents = await poolRef.querySync(
-        relays,
-        {
-          kinds: [4550],
-          '#a': [community_a_tag],
-        },
-      );
+        const mods = community?.tags
+          .filter(tag => tag[0] === 'p' && tag[3] === 'moderator')
+          .map(tag => tag[1]);
+        setModerators(mods || []);
 
-      const mods = community?.tags
-        .filter(tag => tag[0] === 'p' && tag[3] === 'moderator')
-        .map(tag => tag[1]);
-      setModerators(mods || []);
+        // Build set of approved event IDs
+        const approvedEventIds = new Set(
+          approvalEvents
+            .filter(event => mods?.includes(event.pubkey))
+            .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
+        );
 
-      // Build set of approved event IDs
-      const approvedEventIds = new Set(
-        approvalEvents
-          .filter(event => mods?.includes(event.pubkey))
-          .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
-      );
+        // Fetch initial community events
+        const events = await poolRef.querySync(
+          relays,
+          {
+            kinds: [31922, 31923], // Query both date-based and time-based calendar events
+            limit: EVENTS_PER_PAGE,
+            '#a': [community_a_tag],
+          },
+        );
 
-      if (events) {
-        setEvents(events.map(event => ({
-          ...event,
-          approved: approvedEventIds.has(event.id)
-        })));
+        if (events && events.length > 0) {
+          const processedEvents = events.map(event => ({
+            ...event,
+            approved: approvedEventIds.has(event.id)
+          }));
+          
+          // Deduplicate events
+          const uniqueEvents = deduplicateEvents(processedEvents, new Set());
+          setEvents(uniqueEvents);
+          setLoadedEventIds(new Set(uniqueEvents.map(event => event.id)));
+          setLastEventTimestamp(events[events.length - 1].created_at);
+          setHasMore(events.length === EVENTS_PER_PAGE);
+        } else {
+          setEvents([]);
+          setLoadedEventIds(new Set());
+          setHasMore(false);
+        }
+      } else {
+        // Load more events for pagination
+        if (!lastEventTimestamp) {
+          setHasMore(false);
+          return;
+        }
+
+        const moreEvents = await poolRef.querySync(
+          relays,
+          {
+            kinds: [31922, 31923],
+            limit: EVENTS_PER_PAGE,
+            until: lastEventTimestamp,
+            '#a': [community_a_tag],
+          },
+        );
+
+        if (moreEvents && moreEvents.length > 0) {
+          // Get approval events for new events
+          const approvalEvents = await poolRef.querySync(
+            relays,
+            {
+              kinds: [4550],
+              '#a': [community_a_tag],
+            },
+          );
+
+          const mods = communityInfo?.tags
+            .filter(tag => tag[0] === 'p' && tag[3] === 'moderator')
+            .map(tag => tag[1]) || [];
+
+          const approvedEventIds = new Set(
+            approvalEvents
+              .filter(event => mods?.includes(event.pubkey))
+              .map(event => event.tags.find(tag => tag[0] === 'e')?.[1])
+          );
+
+          const processedEvents = moreEvents.map(event => ({
+            ...event,
+            approved: approvedEventIds.has(event.id)
+          }));
+
+          // Deduplicate new events against existing ones
+          const uniqueNewEvents = deduplicateEvents(processedEvents, loadedEventIds);
+          
+          setEvents(prev => [...prev, ...uniqueNewEvents]);
+          setLastEventTimestamp(moreEvents[moreEvents.length - 1].created_at);
+          setHasMore(moreEvents.length === EVENTS_PER_PAGE);
+        } else {
+          setHasMore(false);
+        }
       }
     } catch (err) {
       setError('Failed to fetch events');
       console.error('Error fetching events:', err);
     } finally {
-      setIsLoading(false);
-      setIsInitialized(true);
+      if (isInitialLoad) {
+        setIsLoading(false);
+        setIsInitialized(true);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
+  };
+
+  const loadMoreEvents = async () => {
+    if (isLoadingMore || !hasMore) return;
+    await fetchEvents(false);
+  };
+
+  const refreshEvents = async () => {
+    setLoadedEventIds(new Set());
+    await fetchEvents(true);
   };
 
   const createEvent = async (calendarEvent: CalendarEvent): Promise<boolean> => {
@@ -231,8 +332,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       communityInfo,
       moderators,
       isLoading,
+      isLoadingMore,
       error,
-      refreshEvents: fetchEvents,
+      hasMore,
+      refreshEvents,
+      loadMoreEvents,
       createEvent,
       updateEvent,
       deleteEvent,

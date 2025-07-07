@@ -165,3 +165,16 @@ export function validateTimeBasedCalendarEvent(event: EventTemplate): event is T
 
   return true;
 }
+
+// Utility functions for checking event types
+export function isDateBasedCalendarEvent(event: { kind: number }): boolean {
+  return event.kind === 31922;
+}
+
+export function isTimeBasedCalendarEvent(event: { kind: number }): boolean {
+  return event.kind === 31923;
+}
+
+export function isCalendarEvent(event: { kind: number }): boolean {
+  return isDateBasedCalendarEvent(event) || isTimeBasedCalendarEvent(event);
+}

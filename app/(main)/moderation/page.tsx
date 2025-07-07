@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 import { getCommunityATag } from '@/lib/nip-72';
+import { isCalendarEvent, isDateBasedCalendarEvent } from '@/lib/nip-52';
 import { useKey } from '../../contexts/KeyProvider';
 import { useEvents, type ApprovedEvent } from '../../contexts/EventsProvider';
 
@@ -59,7 +60,7 @@ export default function ModerationPage() {
       console.error('Error publishing approval:', error);
     }
   };
-  const calendarEvents = useMemo(() => events.filter(event => event.kind === 31922 && event.approved === false), [events]);
+  const calendarEvents = events.filter(event => isCalendarEvent(event) && event.approved === false);
 
   return (
     <main className="min-h-screen p-8">
@@ -84,7 +85,7 @@ export default function ModerationPage() {
             let startDisplay: string;
             let endDisplay: string;
 
-            if (event.kind === 31922) {
+            if (isDateBasedCalendarEvent(event)) {
               // Date-based event
               startDisplay = start || 'No start date';
               endDisplay = end || startDisplay;
@@ -112,7 +113,7 @@ export default function ModerationPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold">{title}</h3>
                       <span className="text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded">
-                        {event.kind === 31922 ? 'All-day event' : 'Time-based event'}
+                        {isDateBasedCalendarEvent(event) ? 'All-day event' : 'Time-based event'}
                       </span>
                     </div>
                     <div className="mt-2 text-sm text-gray-600">
@@ -129,7 +130,7 @@ export default function ModerationPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleApprove(event)}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors shadow-sm active:translate-y-0.5 active:shadow-none cursor-pointer hover:cursor-pointer"
                     >
                       Approve
                     </button>

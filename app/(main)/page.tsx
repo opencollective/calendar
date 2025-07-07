@@ -1,13 +1,38 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef, useCallback } from 'react';
 import { EventCard } from '../components/EventCard';
 import { useKey } from '../contexts/KeyProvider';
 import { useEvents } from '../contexts/EventsProvider';
 
 export default function Home() {
   const { publicKey } = useKey();
-  const { events, communityInfo, moderators, isLoading, error, updateEvent, deleteEvent } = useEvents();
+  const { events, communityInfo, moderators, isLoading, isLoadingMore, error, hasMore, updateEvent, deleteEvent, loadMoreEvents } = useEvents();
+  const observerRef = useRef<HTMLDivElement>(null);
+
+  // Intersection observer for infinite scrolling
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasMore && !isLoadingMore) {
+      loadMoreEvents();
+    }
+  }, [hasMore, isLoadingMore, loadMoreEvents]);
+
+  useEffect(() => {
+    const element = observerRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '20px',
+      threshold: 0.1,
+    });
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [handleObserver]);
   
   return (
     <main className="min-h-screen p-8">
@@ -113,6 +138,16 @@ export default function Home() {
               onEventDelete={deleteEvent}
             />
           ))}
+        </div>
+
+        {/* Infinite scroll observer */}
+        <div ref={observerRef} className="py-4">
+          {isLoadingMore && (
+            <div className="text-center text-gray-500">Loading more events...</div>
+          )}
+          {!hasMore && events.length > 0 && (
+            <div className="text-center text-gray-500">No more events to load</div>
+          )}
         </div>
       </div>
     </main>
