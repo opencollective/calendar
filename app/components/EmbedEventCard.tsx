@@ -1,6 +1,6 @@
-import { type NostrEvent } from 'nostr-tools';
 import { generateIcsCalendar, type IcsCalendar } from 'ts-ics';
 import { ApprovedEvent } from '../contexts/EventsProvider';
+import { makeLinksClickable } from '../../lib/text-utils';
 
 interface EmbedEventCardProps {
   event: ApprovedEvent;
@@ -118,9 +118,9 @@ export function EmbedEventCard({ event }: EmbedEventCardProps) {
             <div className="text-xs text-gray-600 mt-1">
               <div>Start: {startDisplay}</div>
               <div>End: {endDisplay}</div>
-              {location && <div>Location: {location}</div>}
+              {location && <div>Location: {makeLinksClickable(location)}</div>}
             </div>
-            <div className="text-xs text-gray-700 mt-1">{event.content}</div>
+            <div className="text-xs text-gray-700 mt-1">{makeLinksClickable(event.content)}</div>
             <button
               onClick={handleDownloadICS}
               className="mt-2 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
@@ -143,7 +143,7 @@ export function EmbedEventCard({ event }: EmbedEventCardProps) {
               {new Date(event.created_at * 1000).toLocaleDateString()}
             </div>
           </div>
-          <div className="text-sm text-gray-700">{event.content}</div>
+          <div className="text-sm text-gray-700">{makeLinksClickable(event.content)}</div>
           <div className="text-xs text-gray-500 mt-1">Kind: {event.kind}</div>
         </div>
       </div>

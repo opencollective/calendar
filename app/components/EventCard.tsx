@@ -9,9 +9,10 @@ import { useKey } from '../contexts/KeyProvider';
 interface EventCardProps {
   event: ApprovedEvent;
   onEventUpdate?: (updatedEvent: CalendarEvent) => void;
+  onEventDelete?: (eventId: string) => Promise<boolean>;
 }
 
-export function EventCard({ event, onEventUpdate }: EventCardProps) {
+export function EventCard({ event, onEventUpdate, onEventDelete }: EventCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { publicKey } = useKey();
   const isCalendarEvent = event.kind === 31922 || event.kind === 31923;
@@ -80,6 +81,23 @@ export function EventCard({ event, onEventUpdate }: EventCardProps) {
 
   const handleEditCancel = () => {
     setIsEditing(false);
+  };
+
+  const handleDelete = async () => {
+    if (!onEventDelete) return;
+    
+    if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      try {
+        const success = await onEventDelete(event.id);
+        if (success) {
+          console.log('Event deleted successfully');
+        } else {
+          console.error('Failed to delete event');
+        }
+      } catch (error) {
+        console.error('Error deleting event:', error);
+      }
+    }
   };
 
   if (isEditing) {
@@ -163,12 +181,20 @@ export function EventCard({ event, onEventUpdate }: EventCardProps) {
             Add to Calendar
           </button>
           {isOwner && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-            >
-              Edit Event
-            </button>
+            <>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+              >
+                Edit Event
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              >
+                Delete Event
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -190,6 +216,16 @@ export function EventCard({ event, onEventUpdate }: EventCardProps) {
       <div className="mt-2 text-sm text-gray-500">
         Kind: {event.kind}
       </div>
+      {isOwner && (
+        <div className="mt-4">
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          >
+            Delete Event
+          </button>
+        </div>
+      )}
     </div>
   );
 } 

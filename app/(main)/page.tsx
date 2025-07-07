@@ -7,7 +7,7 @@ import { useEvents } from '../contexts/EventsProvider';
 
 export default function Home() {
   const { publicKey } = useKey();
-  const { events, communityInfo, moderators, isLoading, error, updateEvent } = useEvents();
+  const { events, communityInfo, moderators, isLoading, error, updateEvent, deleteEvent } = useEvents();
   
   return (
     <main className="min-h-screen p-8">
@@ -110,6 +110,7 @@ export default function Home() {
               key={event.id} 
               event={event} 
               onEventUpdate={updateEvent}
+              onEventDelete={deleteEvent}
             />
           ))}
         </div>

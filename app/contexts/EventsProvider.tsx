@@ -19,6 +19,7 @@ interface EventsContextType {
   refreshEvents: () => Promise<void>;
   createEvent: (calendarEvent: CalendarEvent) => Promise<boolean>;
   updateEvent: (updatedEvent: CalendarEvent) => Promise<boolean>;
+  deleteEvent: (eventId: string) => Promise<boolean>;
   isInitialized: boolean;
 }
 
@@ -179,6 +180,45 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteEvent = async (eventId: string): Promise<boolean> => {
+    try {
+      if (!secretKey || !publicKey) {
+        console.error('No secret key available');
+        return false;
+      }
+
+      // Create NIP-09 deletion event (kind 5)
+      const deletionEvent = {
+        kind: 5,
+        pubkey: publicKey,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [['e', eventId]], // Event ID to be deleted
+        content: '',
+      };
+
+      let event = finalizeEvent(deletionEvent, secretKey);
+      
+      let isGood = verifyEvent(event);
+      console.log('Deleting event:', event);
+      
+      if (isGood) {
+        await Promise.all(poolRef.publish(relays, event));
+        
+        // Wait a moment for the event to be published
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Refresh events to reflect the deletion
+        await fetchEvents();
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (keyInitialized) {
       fetchEvents();
@@ -195,6 +235,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       refreshEvents: fetchEvents,
       createEvent,
       updateEvent,
+      deleteEvent,
       isInitialized
     }}>
       {children}

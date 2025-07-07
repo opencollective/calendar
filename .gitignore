@@ -2,5 +2,5 @@
 
 tsconfig.tsbuildinfo
 node_modules/
-.env
+.env*
 .vercel
