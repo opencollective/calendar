@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SimplePool, finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools';
+import { SimplePool, finalizeEvent, generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
 import { getCommunityATag } from '@/lib/nip-72';
 import { createCalendarEventTemplate, type ICSEvent } from '@/lib/nip-52';
 import { fetchAndParseICSEvents } from '@/lib/ics-utils';
@@ -7,6 +7,7 @@ import { fetchAndParseICSEvents } from '@/lib/ics-utils';
 const community_id = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_ID;
 const community_identifier = process.env.NEXT_PUBLIC_NOSTR_COMMUNITY_IDENTIFIER;
 const ics_url = process.env.ICS_URL;
+const event_publishing_nsec = process.env.EVENT_PUBLISHING_NSEC;
 const relays = ['wss://relay.chorus.community'];
 
 async function fetchAndProcessICSEvents() {
@@ -32,6 +33,13 @@ export async function GET() {
     );
   }
 
+  if (!event_publishing_nsec) {
+    return NextResponse.json(
+      { error: 'EVENT_PUBLISHING_NSEC not found in environment variables' },
+      { status: 500 }
+    );
+  }
+
   const pool = new SimplePool();
   const community_a_tag = getCommunityATag(community_id, community_identifier);
 
@@ -41,8 +49,21 @@ export async function GET() {
     let icsEventsCreated = 0;
 
     if (icsEvents.length > 0) {
-      // Generate a secret key for creating events (in production, use a proper key management system)
-      const secretKey = generateSecretKey();
+      // Convert nsec to secret key
+      let secretKey: Uint8Array;
+      try {
+        const decoded = nip19.decode(event_publishing_nsec);
+        if (decoded.type !== 'nsec') {
+          throw new Error('Invalid nsec format');
+        }
+        secretKey = decoded.data;
+      } catch (error) {
+        console.error('Error decoding nsec:', error);
+        return NextResponse.json(
+          { error: 'Invalid EVENT_PUBLISHING_NSEC format' },
+          { status: 500 }
+        );
+      }
 
       console.log(`Processing ${icsEvents.length} ICS events`);
 
